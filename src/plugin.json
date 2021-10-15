@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "panel",
+  "name": "interposcatter",
+  "id": "uchicago-edu-interposcatter",
+  "info": {
+    "description": "Scatterplots of two time-dependent variables onto each other, interpolating one time basis onto the other. ",
+    "author": {
+      "name": "Cosmin Deaconu",
+      "url": "uchicago.edu"
+    },
+    "keywords": [
+      "scatter",
+      "interpolating",
+      "xy"
+    ],
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "links": [
+      {
+        "name": "Website",
+        "url": "https://github.com/cozzyd/uchicago-edu-interposcatter"
+      },
+      {
+        "name": "License",
+        "url": "https://opensource.org/licenses/MIT"
+      }
+    ],
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=7.0.0",
+    "plugins": []
+  }
+}
