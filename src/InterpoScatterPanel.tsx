@@ -66,10 +66,10 @@ function interpolateYontoX(
       if (yt.get(ilowerbound) === xt.get(i)) {
         interpolated[1].push(yv.get(i));
       } else {
-        const tlow = yt.get(ilowerbound);
+        const tlow = yt.get(ilowerbound - 1);
         const thigh = yt.get(ilowerbound);
         const t = xt.get(i);
-        const vlow = yv.get(ilowerbound);
+        const vlow = yv.get(ilowerbound - 1);
         const vhigh = yv.get(ilowerbound);
         const frac = (t - tlow) / (thigh - tlow);
         interpolated[1].push(frac * vhigh + (1 - frac) * vlow);
@@ -166,19 +166,6 @@ export const InterpoScatterPanel: React.FC<Props> = ({ options, data, width, hei
 
   const plotVals = interpolateYontoX(xTimes, xVals, yTimes, yVals, options.edgeBehavior);
 
-  //  let plotlyData = [];
-
-  //  if (options.plotType === 'histo') {
-  //    plotlyData.push({ x: plotVals[0], y: plotVals[1], type: 'histogram2d' });
-  //  } else {
-  //    plotlyData.push({
-  //      type: 'scatter',
-  //      x: plotVals[0],
-  //      y: plotVals[1],
-  //      mode: options.plotType === 'lines' ? 'lines+markers' : 'markers',
-  //    });
-  //  }
-  //
   const plotlyLayout = {
     xaxis: { title: data.series[xIndex].name, showgrid: true },
     yaxis: { title: data.series[yIndex].name, showgrid: true },
