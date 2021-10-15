@@ -1,14 +1,18 @@
 import React from 'react';
 import { PanelProps, DataFrame, Vector } from '@grafana/data';
-import { InterpoScatterOptions, EdgeBehavior } from 'types';
+import { InterpoScatterOptions, EdgeBehavior, InterpolateType } from 'types';
 import { css, cx } from 'emotion';
-import { stylesFactory } from '@grafana/ui';
+import { stylesFactory, useTheme } from '@grafana/ui';
 import Plot from 'react-plotly.js';
 
 interface Props extends PanelProps<InterpoScatterOptions> {}
 
 function checkSeries(series: DataFrame) {
   return series.fields?.length > 1 && series.fields[0].type === 'time' && series.fields[1].type === 'number';
+}
+
+function seriesName(series: DataFrame) {
+  return series.name === undefined ? series.fields[1].name : series.name;
 }
 
 function lowerBound(x: number, xs: Vector<number>) {
@@ -34,7 +38,8 @@ function interpolateYontoX(
   xv: Vector<number>,
   yt: Vector<number>,
   yv: Vector<number>,
-  edge: EdgeBehavior
+  edge: EdgeBehavior,
+  how: InterpolateType
 ) {
   let interpolated: number[][] = [[], []];
 
@@ -64,8 +69,11 @@ function interpolateYontoX(
       const ilowerbound = lowerBound(xt.get(i), yt);
       //equal case, no interpolation necessary
       if (yt.get(ilowerbound) === xt.get(i)) {
-        interpolated[1].push(yv.get(i));
+        interpolated[1].push(yv.get(ilowerbound));
+      } else if (how === 'zerohold') {
+        interpolated[1].push(yv.get(ilowerbound - 1));
       } else {
+        //linear interpolation!
         const tlow = yt.get(ilowerbound - 1);
         const thigh = yt.get(ilowerbound);
         const t = xt.get(i);
@@ -74,6 +82,8 @@ function interpolateYontoX(
         const frac = (t - tlow) / (thigh - tlow);
         interpolated[1].push(frac * vhigh + (1 - frac) * vlow);
       }
+
+      // outside range
     } else if (edge === 'zerohold') {
       interpolated[0].push(xv.get(i));
       interpolated[1].push(xt.get(i) < y_tmin ? yv.get(0) : yv.get(ylen - 1));
@@ -81,8 +91,8 @@ function interpolateYontoX(
       interpolated[0].push(xv.get(i));
       interpolated[1].push(
         xt.get(i) < y_tmin
-          ? extrapolate_b_low + extrapolate_m_low * xt.get(i)
-          : extrapolate_b_high + extrapolate_m_high * xt.get(i)
+          ? extrapolate_b_low + extrapolate_m_low * (xt.get(i) - y_tmin)
+          : extrapolate_b_high + extrapolate_m_high * (xt.get(i) - y_tmax)
       );
     }
   }
@@ -91,7 +101,7 @@ function interpolateYontoX(
 }
 
 export const InterpoScatterPanel: React.FC<Props> = ({ options, data, width, height }) => {
-  //const theme = useTheme();
+  const theme = useTheme();
   const styles = getStyles();
 
   //we need a time series with two metrics (two numerics).
@@ -109,37 +119,49 @@ export const InterpoScatterPanel: React.FC<Props> = ({ options, data, width, hei
 
   const xName = options.xName.trim();
   const yName = options.yName.trim();
-
   let xIndex = 0;
   let messages = '';
-
-  if (xName !== '') {
+  let regex = /^@\d+@$/;
+  if (regex.test(xName)) {
+    const xIndexMaybe = parseInt(xName.slice(1, -1), 10);
+    if (xIndexMaybe >= data.series.length) {
+      messages += 'numeric xName of ' + xIndex + ' is too big, using 0 ';
+    } else {
+      xIndex = xIndexMaybe;
+    }
+  } else if (xName !== '') {
     let matched = false;
     for (let i = 0; i < data.series.length; i++) {
-      if (data.series[i]?.name?.trim() === xName) {
+      if (seriesName(data.series[i])?.trim() === xName) {
         xIndex = i;
         matched = true;
         break;
       }
     }
     if (!matched) {
-      messages += 'Did not find match for ' + xName + '. Using first available';
+      messages += 'Did not find match for ' + xName + '. Using first available. ';
     }
   }
 
   let yIndex = xIndex === 0 ? 1 : 0;
-
-  if (yName !== '') {
+  if (regex.test(yName)) {
+    const yIndexMaybe = parseInt(yName.slice(1, -1), 10);
+    if (yIndexMaybe >= data.series.length) {
+      messages += 'numeric yName of ' + yIndex + ' is too big, using 0 ';
+    } else {
+      yIndex = yIndexMaybe;
+    }
+  } else if (yName !== '') {
     let matched = false;
     for (let i = 0; i < data.series.length; i++) {
-      if (data.series[i]?.name?.trim() === yName) {
+      if (seriesName(data.series[i])?.trim() === yName) {
         yIndex = i;
         matched = true;
         break;
       }
     }
     if (!matched) {
-      messages += 'Did not find match for ' + yName + '. Using first available';
+      messages += 'Did not find match for ' + yName + '. Using first available. ';
     }
   }
 
@@ -164,13 +186,32 @@ export const InterpoScatterPanel: React.FC<Props> = ({ options, data, width, hei
   const xVals = data.series[xIndex].fields[1].values;
   const yVals = data.series[yIndex].fields[1].values;
 
-  const plotVals = interpolateYontoX(xTimes, xVals, yTimes, yVals, options.edgeBehavior);
+  const plotVals = interpolateYontoX(xTimes, xVals, yTimes, yVals, options.edgeBehavior, options.interpolateType);
 
-  const plotlyLayout = {
-    xaxis: { title: data.series[xIndex].name, showgrid: true },
-    yaxis: { title: data.series[yIndex].name, showgrid: true },
-  };
+  const bgcolor = theme.isDark ? '#000' : '#fff';
+  const gridcolor = theme.isDark ? '#bbb' : '#444';
+  const fgcolor = theme.isDark ? '#fff' : '#000';
 
+  var plotlyData: any[] = [];
+
+  if (options.plotType === 'histo') {
+    plotlyData.push({
+      x: plotVals[0],
+      y: plotVals[1],
+      type: 'histogram2d',
+      nbinsx: options.nbinsx,
+      nbinsy: options.nbinsy,
+    });
+  } else {
+    plotlyData.push({
+      x: plotVals[0],
+      y: plotVals[1],
+      type: 'scatter',
+      mode: options.plotType === 'lines' ? 'lines+markers' : 'markers',
+    });
+  }
+
+  console.log(bgcolor);
   return (
     <div
       className={cx(
@@ -186,15 +227,28 @@ export const InterpoScatterPanel: React.FC<Props> = ({ options, data, width, hei
       </p>
 
       <Plot
-        data={[
-          {
-            x: plotVals[0],
-            y: plotVals[1],
-            type: options.plotType === 'histo' ? 'histogram2d' : 'scatter',
-            mode: options.plotType === 'histo' ? undefined : options.plotType === 'lines' ? 'lines+markers' : 'markers',
+        data={plotlyData}
+        layout={{
+          xaxis: {
+            title: seriesName(data.series[xIndex]),
+            showgrid: true,
+            color: fgcolor,
+            axiscolor: gridcolor,
+            gridcolor: gridcolor,
           },
-        ]}
-        layout={plotlyLayout}
+          yaxis: {
+            title: seriesName(data.series[yIndex]),
+            showgrid: true,
+            color: fgcolor,
+            axiscolor: gridcolor,
+            gridcolor: gridcolor,
+          },
+          width: width,
+          height: height,
+          paper_bgcolor: bgcolor,
+          plot_bgcolor: bgcolor,
+          font: { color: fgcolor },
+        }}
       />
     </div>
   );

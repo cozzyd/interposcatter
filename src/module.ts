@@ -28,17 +28,18 @@ export const plugin = new PanelPlugin<InterpoScatterOptions>(InterpoScatterPanel
     .addTextInput({
       path: 'xName',
       defaultValue: '',
-      name: 'x series (leave blank for first available)',
+      name: 'x series (leave blank for first available, or use @i@ for ith)',
     })
     .addTextInput({
       path: 'yName',
       defaultValue: '',
-      name: 'y series (leave blank for first available)',
+      name: 'y series (leave blank for first available, or use @i@ for ith)',
     })
+
     .addRadio({
       path: 'edgeBehavior',
       defaultValue: 'ignore',
-      name: 'Edge Behavior',
+      name: 'Out-of-Bounds Behavior',
       settings: {
         options: [
           {
@@ -51,9 +52,36 @@ export const plugin = new PanelPlugin<InterpoScatterOptions>(InterpoScatterPanel
           },
           {
             value: 'extrapolate',
-            label: 'iExtrapoalte',
+            label: 'Extrapolate',
           },
         ],
       },
+    })
+    .addRadio({
+      path: 'interpolateType',
+      defaultValue: 'linear',
+      name: 'Interpolate Type',
+      settings: {
+        options: [
+          {
+            value: 'zerohold',
+            label: 'Zero-Hold',
+          },
+          {
+            value: 'linear',
+            label: 'Linear',
+          },
+        ],
+      },
+    })
+    .addTextInput({
+      path: 'nbinsx',
+      defaultValue: '50',
+      name: 'nbinsx passed to plotly for histogram',
+    })
+    .addTextInput({
+      path: 'nbinsy',
+      defaultValue: '50',
+      name: 'nbinsy passed to plotly for histogram',
     });
 });
