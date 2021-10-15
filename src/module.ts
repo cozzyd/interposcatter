@@ -28,12 +28,12 @@ export const plugin = new PanelPlugin<InterpoScatterOptions>(InterpoScatterPanel
     .addTextInput({
       path: 'xName',
       defaultValue: '',
-      name: 'x series (leave blank for first available, or use @i@ for ith)',
+      name: 'x series (leave blank for first available, or use @i@ for ith, 0-indexed)',
     })
     .addTextInput({
       path: 'yName',
       defaultValue: '',
-      name: 'y series (leave blank for first available, or use @i@ for ith)',
+      name: 'y series (leave blank for first available, or use @i@ for ith, 0-indexed)',
     })
 
     .addRadio({

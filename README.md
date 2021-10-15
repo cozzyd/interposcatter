@@ -6,6 +6,8 @@ To use it, you must have at least two time series plotted (a data frame with fir
 
 More documentation will be written in the future, maybe. 
 
+This is my first time using typescript and the insane world of modern web packaging. Be gentle. 
+
 ## Getting started
 
 1. Install dependencies
@@ -32,4 +34,3 @@ More documentation will be written in the future, maybe.
    yarn build
    ```
 
- [Grafana UI Library](https://developers.grafana.com/ui) - UI components to help you build interfaces using Grafana Design System
