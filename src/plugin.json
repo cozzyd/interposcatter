@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
   "type": "panel",
   "name": "interposcatter",
-  "id": "uchicago-edu-interposcatter",
+  "id": "cozzyd-interposcatter",
   "info": {
     "description": "Scatterplots of two time-dependent variables onto each other, interpolating one time basis onto the other. ",
     "author": {
@@ -21,7 +21,7 @@
     "links": [
       {
         "name": "Website",
-        "url": "https://github.com/cozzyd/uchicago-edu-interposcatter"
+        "url": "https://github.com/cozzyd/interposcatter"
       },
       {
         "name": "License",

@@ -1,5 +1,5 @@
 {
-  "name": "uchicago-edu-interposcatter",
+  "name": "cozzyd-interposcatter",
   "version": "0.1.0",
   "description": "Scatterplots of two time-dependent variables onto each other, interpolating one time basis onto the other. ",
   "scripts": {
