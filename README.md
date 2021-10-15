@@ -1,6 +1,10 @@
 # Interposcatter
 
-Interposcatter allows you to plot one dependent variable of a time series vs. another. O
+Interposcatter allows you to plot one dependent variable of a time series vs. another. 
+
+To use it, you must have at least two time series plotted (a data frame with first field time, second field numeric). 
+
+More documentation will be written in the future, maybe. 
 
 ## Getting started
 
