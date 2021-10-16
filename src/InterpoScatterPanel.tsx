@@ -157,8 +157,8 @@ export const InterpoScatterPanel: React.FC<Props> = ({ options, data, width, hei
 
   //now let's get the two series we want. This is either the first 2, or the ones that match the settings.
 
-  const xName = options.xName.trim();
-  const yName = options.yName.trim();
+  const xName = options.xName?.trim() || '';
+  const yName = options.yName?.trim() || '';
   let xIndex = 0;
   let messages = '';
   let regex = /^@\d+@$/;
