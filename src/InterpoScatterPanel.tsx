@@ -23,10 +23,11 @@
 
 import React from 'react';
 import { PanelProps, DataFrame, Vector } from '@grafana/data';
-import { InterpoScatterOptions, EdgeBehavior, InterpolateType } from 'types';
+import { InterpoScatterOptions, EdgeBehavior, InterpolateType, Interpolated } from 'types';
 import { css, cx } from 'emotion';
 import { stylesFactory, useTheme } from '@grafana/ui';
 import Plot from 'react-plotly.js';
+import CSS from 'csstype';
 
 interface Props extends PanelProps<InterpoScatterOptions> {}
 
@@ -56,6 +57,13 @@ function lowerBound(x: number, xs: Vector<number>) {
   return ifirst;
 }
 
+function dtCalc(x: number, x0: number, x1: number) {
+  if (Math.abs(x - x0) < Math.abs(x - x1)) {
+    return x - x0;
+  }
+  return x - x1;
+}
+
 function interpolateYontoX(
   xt: Vector<number>,
   xv: Vector<number>,
@@ -64,7 +72,7 @@ function interpolateYontoX(
   edge: EdgeBehavior,
   how: InterpolateType
 ) {
-  let interpolated: number[][] = [[], []];
+  let interpolated = new Interpolated();
 
   //loop over xs
 
@@ -87,14 +95,17 @@ function interpolateYontoX(
   for (let i = 0; i < xlen; i++) {
     //The usual case, time of x is bounded by y times
     if (xt.get(i) >= y_tmin && xt.get(i) <= y_tmax) {
-      interpolated[0].push(xv.get(i));
+      interpolated.x.push(xv.get(i));
+      interpolated.t.push(xt.get(i));
 
       const ilowerbound = lowerBound(xt.get(i), yt);
       //equal case, no interpolation necessary
       if (yt.get(ilowerbound) === xt.get(i)) {
-        interpolated[1].push(yv.get(ilowerbound));
+        interpolated.y.push(yv.get(ilowerbound));
+        interpolated.dt.push(0);
       } else if (how === 'zerohold') {
-        interpolated[1].push(yv.get(ilowerbound - 1));
+        interpolated.y.push(yv.get(ilowerbound - 1));
+        interpolated.dt.push(xt.get(i) - yt.get(ilowerbound - 1));
       } else {
         //linear interpolation!
         const tlow = yt.get(ilowerbound - 1);
@@ -103,20 +114,26 @@ function interpolateYontoX(
         const vlow = yv.get(ilowerbound - 1);
         const vhigh = yv.get(ilowerbound);
         const frac = (t - tlow) / (thigh - tlow);
-        interpolated[1].push(frac * vhigh + (1 - frac) * vlow);
+        interpolated.y.push(frac * vhigh + (1 - frac) * vlow);
+        interpolated.dt.push(dtCalc(t, tlow, thigh));
       }
 
       // outside range
     } else if (edge === 'zerohold') {
-      interpolated[0].push(xv.get(i));
-      interpolated[1].push(xt.get(i) < y_tmin ? yv.get(0) : yv.get(ylen - 1));
+      interpolated.x.push(xv.get(i));
+      interpolated.y.push(xt.get(i) < y_tmin ? yv.get(0) : yv.get(ylen - 1));
+      interpolated.t.push(xt.get(i));
+      interpolated.dt.push(xt.get(i) < y_tmin ? xt.get(i) - y_tmin : xt.get(i) - y_tmax);
     } else if (edge === 'extrapolate') {
-      interpolated[0].push(xv.get(i));
-      interpolated[1].push(
+      interpolated.x.push(xv.get(i));
+      interpolated.y.push(
         xt.get(i) < y_tmin
           ? extrapolate_b_low + extrapolate_m_low * (xt.get(i) - y_tmin)
           : extrapolate_b_high + extrapolate_m_high * (xt.get(i) - y_tmax)
       );
+
+      interpolated.t.push(xt.get(i));
+      interpolated.dt.push(xt.get(i) < y_tmin ? xt.get(i) - y_tmin : xt.get(i) - y_tmax);
     }
   }
 
@@ -211,30 +228,49 @@ export const InterpoScatterPanel: React.FC<Props> = ({ options, data, width, hei
 
   const plotVals = interpolateYontoX(xTimes, xVals, yTimes, yVals, options.edgeBehavior, options.interpolateType);
 
-  const bgcolor = theme.isDark ? '#000' : '#fff';
+  const bgcolor = theme.isDark ? '#141619' : '#fff';
   const gridcolor = theme.isDark ? '#bbb' : '#444';
   const fgcolor = theme.isDark ? '#fff' : '#000';
+
+  let csv_content =
+    'data:text/csv;charset=utf-8,' +
+    seriesName(data.series[xIndex]) +
+    ',' +
+    seriesName(data.series[yIndex]) +
+    ',unixtime_x,delta_t_y\r\n';
+  for (let i = 0; i < plotVals.x.length; i++) {
+    csv_content +=
+      plotVals.x[i] + ',' + plotVals.y[i] + ',' + plotVals.t[i] / 1000 + ',' + plotVals.dt[i] / 1000 + '\r\n';
+  }
 
   var plotlyData: any[] = [];
 
   if (options.plotType === 'histo') {
     plotlyData.push({
-      x: plotVals[0],
-      y: plotVals[1],
+      x: plotVals.x,
+      y: plotVals.y,
       type: 'histogram2d',
+      colorscale: 'Blackbody',
       nbinsx: options.nbinsx,
       nbinsy: options.nbinsy,
     });
   } else {
     plotlyData.push({
-      x: plotVals[0],
-      y: plotVals[1],
+      x: plotVals.x,
+      y: plotVals.y,
       type: 'scatter',
       mode: options.plotType === 'lines' ? 'lines+markers' : 'markers',
     });
   }
 
-  console.log(bgcolor);
+  const barStyle: CSS.Properties = {
+    marginBottom: '0px',
+    marginTop: '0px',
+    lineHeight: 1,
+  };
+
+  const plotHeight = height < 64 ? 32 : height - 32;
+
   return (
     <div
       className={cx(
@@ -245,10 +281,6 @@ export const InterpoScatterPanel: React.FC<Props> = ({ options, data, width, hei
         `
       )}
     >
-      <p>
-        <b> {messages} </b>
-      </p>
-
       <Plot
         data={plotlyData}
         layout={{
@@ -267,12 +299,16 @@ export const InterpoScatterPanel: React.FC<Props> = ({ options, data, width, hei
             gridcolor: gridcolor,
           },
           width: width,
-          height: height,
+          height: plotHeight,
           paper_bgcolor: bgcolor,
           plot_bgcolor: bgcolor,
           font: { color: fgcolor },
         }}
       />
+
+      <p style={barStyle}>
+        <a href={encodeURI(csv_content)}>[download data csv]</a> <b> {messages} </b>
+      </p>
     </div>
   );
 };
