@@ -28,7 +28,7 @@
         "url": "https://opensource.org/licenses/MIT"
       }
     ],
-    "screenshots": [],
+    "screenshots": ["img/screenshot.png"],
     "version": "%VERSION%",
     "updated": "%TODAY%"
   },
