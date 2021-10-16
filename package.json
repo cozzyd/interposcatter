@@ -1,6 +1,6 @@
 {
   "name": "cozzyd-interposcatter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Scatterplots of two time-dependent variables onto each other, interpolating one time basis onto the other. ",
   "scripts": {
     "build": "grafana-toolkit plugin:build",
