@@ -39,8 +39,7 @@ function seriesName(series: DataFrame) {
   return series.name === undefined ? series.fields[1].name : series.name;
 }
 
-function lowerBound(x: number, xs: Vector<number>) {
-  let ifirst = 0;
+function lowerBound(x: number, xs: Vector<number>, ifirst = 0) {
   let ilast = xs.length;
   let count = ilast - ifirst;
 
@@ -92,13 +91,16 @@ function interpolateYontoX(
     extrapolate_m_high = (yv.get(ylen - 1) - yv.get(ylen - 2)) / (yt.get(ylen - 1) - yt.get(ylen - 2));
   }
 
+  // Because both arrays are assumed to be sorted, ilowerbound should be monotonically increasing
+  let ilowerbound = 0;
+
   for (let i = 0; i < xlen; i++) {
     //The usual case, time of x is bounded by y times
     if (xt.get(i) >= y_tmin && xt.get(i) <= y_tmax) {
       interpolated.x.push(xv.get(i));
       interpolated.t.push(xt.get(i));
 
-      const ilowerbound = lowerBound(xt.get(i), yt);
+      ilowerbound = lowerBound(xt.get(i), yt, ilowerbound);
       //equal case, no interpolation necessary
       if (yt.get(ilowerbound) === xt.get(i)) {
         interpolated.y.push(yv.get(ilowerbound));

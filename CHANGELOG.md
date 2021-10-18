@@ -9,3 +9,7 @@ Initial working version.
 
 Make erasing the text fields not cause it to crash! 
 
+## 0.1.2 (unreleased)
+
+Performance improvements
+
