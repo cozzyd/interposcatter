@@ -203,6 +203,9 @@ export const InterpoScatterPanel: React.FC<Props> = ({ options, data, width, hei
           paper_bgcolor: bgcolor,
           plot_bgcolor: bgcolor,
           font: { color: fgcolor },
+          margin: { 
+            l: 40, r: 30, b: 40, t: 20, pad: 0
+          }
         }}
       />
 
