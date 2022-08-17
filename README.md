@@ -1,6 +1,6 @@
 # Interposcatter
 
-Interposcatter allows you to plot one dependent variable of a time series vs. another. 
+Interposcatter is a Grafana plugin that allows you to plot one dependent variable of a time series vs. another. 
 
 To use it, you must have at least two time series plotted (a data frame with first field time, second field numeric). 
 
