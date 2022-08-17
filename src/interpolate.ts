@@ -1,3 +1,4 @@
+// interpolate.ts implements utility methods for Interposcatter.
 //
 // This file is part of interposcatter
 //
